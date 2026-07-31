@@ -115,6 +115,32 @@ class ImageProcessor {
                 return this.imageData?.height || 0;
             }
         }
+// 将文字转为二进制数组（UTF-8编码）
+function textToBits(text) {
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(text);
+    const bits = [];
+    for (const byte of bytes) {
+        for (let i = 7; i >= 0; i--) {
+            bits.push((byte >> i) & 1);
+        }
+    }
+    return bits;
+}
+
+// 将二进制数组转回文字
+function bitsToText(bits) {
+    const bytes = [];
+    for (let i = 0; i < bits.length; i += 8) {
+        let byte = 0;
+        for (let j = 0; j < 8; j++) {
+            byte = (byte << 1) | (bits[i + j] || 0);
+        }
+        bytes.push(byte);
+    }
+    const decoder = new TextDecoder();
+    return decoder.decode(new Uint8Array(bytes));
+}
 // ---- 以下是 DCT 核心工具函数 ----
 
 // 1D DCT (Type-II) 输入长度 8
@@ -222,87 +248,92 @@ function extractBitFromBlock(block) {
     const coeff = dct[4][3];
     return Math.round(coeff) % 2;
 }
+// 在图片中嵌入文字（每个块存一位，循环冗余）
+function embedTextWatermark(processor, text) {
+    const data = processor.imageData.data;
+    const width = processor.width;
+    const height = processor.height;
+    const bits = textToBits(text);
+    const bitLen = bits.length;
 
-// ---- 主函数：在整张图片中嵌入水印（每个块嵌入相同比特） ----
-function embedWatermark(imageProcessor, bit = 1) {
-    const data = imageProcessor.imageData.data;
-    const width = imageProcessor.width;
-    const height = imageProcessor.height;
-
-    // 按 8x8 块处理
+    let bitIndex = 0;
     for (let y = 0; y < height - 7; y += 8) {
         for (let x = 0; x < width - 7; x += 8) {
-            // 提取该块的 Y 值（从 RGB 转）
+            // 提取该块的 Y 值
             const block = [];
             for (let dy = 0; dy < 8; dy++) {
                 const row = [];
                 for (let dx = 0; dx < 8; dx++) {
                     const idx = ((y + dy) * width + (x + dx)) * 4;
-                    const r = data[idx];
-                    const g = data[idx + 1];
-                    const b = data[idx + 2];
-                    row.push(rgbToY(r, g, b));
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    row.push(0.299 * r + 0.587 * g + 0.114 * b);
                 }
                 block.push(row);
             }
-            // 嵌入水印
-            const newBlock = embedBitInBlock(block, bit);
-            // 写回 RGB（只修改亮度，保持色相不变）
+
+            // 嵌入当前 bit（循环使用 bits）
+            const bitToEmbed = bits[bitIndex % bitLen];
+            const newBlock = embedBitInBlock(block, bitToEmbed);
+            bitIndex++;
+
+            // 写回 RGB
             for (let dy = 0; dy < 8; dy++) {
                 for (let dx = 0; dx < 8; dx++) {
                     const idx = ((y + dy) * width + (x + dx)) * 4;
                     const yVal = newBlock[dy][dx];
-                    // 从原像素提取 CbCr（我们用原来的色度，但只改亮度）
-                    const r = data[idx];
-                    const g = data[idx + 1];
-                    const b = data[idx + 2];
-                    // 用 yVal 替换，但保持色度不变：最简单的做法是转换为 YCbCr 再转回，但这里我们直接用 yVal 作为新亮度，并保留原 CbCr 比例
-                    // 更准确：将 RGB 转为 YCbCr，替换 Y，再转回 RGB
-                    // 为简化，我们使用近似：直接用 yVal 替换亮度，保持原色度偏差
-                    // 但为了效果，我们使用标准转换：
-                    const cr = 0.713 * (r - yVal) + 128; // 近似
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    const cr = 0.713 * (r - yVal) + 128;
                     const cb = 0.564 * (b - yVal) + 128;
-                    const newR = yVal + 1.402 * (cr - 128);
-                    const newG = yVal - 0.344 * (cb - 128) - 0.714 * (cr - 128);
-                    const newB = yVal + 1.772 * (cb - 128);
-                    data[idx] = Math.round(Math.min(255, Math.max(0, newR)));
-                    data[idx + 1] = Math.round(Math.min(255, Math.max(0, newG)));
-                    data[idx + 2] = Math.round(Math.min(255, Math.max(0, newB)));
+                    data[idx] = Math.round(Math.min(255, Math.max(0, yVal + 1.402 * (cr - 128))));
+                    data[idx + 1] = Math.round(Math.min(255, Math.max(0, yVal - 0.344 * (cb - 128) - 0.714 * (cr - 128))));
+                    data[idx + 2] = Math.round(Math.min(255, Math.max(0, yVal + 1.772 * (cb - 128))));
                 }
             }
         }
     }
-    // 更新 imageData 已修改
-    imageProcessor.imageData.data = data;
+    processor.imageData.data = data;
 }
 
-// ---- 提取全图水印（每个块提取，然后统计多数） ----
-function extractWatermark(imageProcessor) {
-    const data = imageProcessor.imageData.data;
-    const width = imageProcessor.width;
-    const height = imageProcessor.height;
-    let sumBits = 0;
-    let count = 0;
+// 从图片中提取文字（利用冗余投票机制）
+function extractTextWatermark(processor, textLength) {
+    const data = processor.imageData.data;
+    const width = processor.width;
+    const height = processor.height;
+    const totalBits = textLength * 8; // 每个字符占8位（UTF-8）
+    
+    // 投票数组：记录每个bit位置被读出1的次数
+    const votes = new Array(totalBits).fill(0);
+    let blockCount = 0;
 
     for (let y = 0; y < height - 7; y += 8) {
         for (let x = 0; x < width - 7; x += 8) {
+            // 提取该块的 Y 值
             const block = [];
             for (let dy = 0; dy < 8; dy++) {
                 const row = [];
                 for (let dx = 0; dx < 8; dx++) {
                     const idx = ((y + dy) * width + (x + dx)) * 4;
-                    const r = data[idx];
-                    const g = data[idx + 1];
-                    const b = data[idx + 2];
-                    row.push(rgbToY(r, g, b));
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    row.push(0.299 * r + 0.587 * g + 0.114 * b);
                 }
                 block.push(row);
             }
-            const bit = extractBitFromBlock(block);
-            sumBits += bit;
-            count++;
+
+            // 提取 DCT 系数奇偶性
+            const dct = dct2d(block);
+            const coeff = dct[4][3];
+            const extractedBit = Math.round(coeff) % 2;
+            
+            // 投票：该块对应的是第几个 bit
+            const bitIndex = blockCount % totalBits;
+            if (extractedBit === 1) votes[bitIndex] += 1;
+            else votes[bitIndex] -= 1; // 用减法来抵消0的权重
+            
+            blockCount++;
         }
     }
-    // 多数表决
-    return sumBits > count / 2 ? 1 : 0;
+
+    // 根据投票结果还原 bits（大于0说明1多，小于0说明0多）
+    const resultBits = votes.map(v => v > 0 ? 1 : 0);
+    return bitsToText(resultBits);
 }
