@@ -290,14 +290,11 @@ function debugExtract(processor, maxChars = 20) {
 
     const resultBits = votes.map(v => v > 0 ? 1 : 0);
     const text = bitsToText(resultBits);
-
-    console.log('===== 水印提取调试信息 =====');
-    console.log('总可用块数:', blockCount);
-    console.log('需要的总比特数 (maxChars * 8):', totalBits);
-    console.log('投票数组 (前20个):', votes.slice(0, 20));
-    console.log('投票决策后的比特流 (前100位):', resultBits.slice(0, 100).join(''));
-    console.log('提取出的文字:', text);
-    console.log('===============================');
+    alert('总可用块数:', blockCount);
+    alert('需要的总比特数 (maxChars * 8):', totalBits);
+    alert('投票数组 (前20个):', votes.slice(0, 20));
+    alert('投票决策后的比特流 (前100位):', resultBits.slice(0, 100).join(''));
+    alert('提取出的文字:', text);
 
     return { text, votes, resultBits, blockCount };
 }

@@ -366,7 +366,7 @@ const existingText = extractTextWatermark(processor, 10);
 // 如果提取出的文字非空且不是乱码（简单判断长度>0且不含稀奇字符），视为已有水印
 if (existingText && existingText.length > 0 && !existingText.includes('�')) {
     alert(`该图片已带有不可见水印，内容为：「${existingText}」`);
-alert(debugExtract(processor, 20));// 20 代表最多提取 20 个字符
+    debugExtract(processor, 20);// 20 代表最多提取 20 个字符
 }
         // 获取原始图片像素数据（用于采样背景亮度）
         const imageData = processor.imageData;
