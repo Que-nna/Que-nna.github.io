@@ -96,17 +96,18 @@ function bitsToText(bits) {
     return decoder.decode(new Uint8Array(bytes));
 }
 
-// ==================== DCT / IDCT（8x8，标准实现） ====================
+// ==================== DCT / IDCT（8x8，修正缩放系数） ====================
 function dct1d(input) {
     const N = 8;
     const out = new Float64Array(N);
+    const scale = Math.sqrt(2 / N);   // ← 修正：从 (2/N) 改为 sqrt(2/N)
     for (let k = 0; k < N; k++) {
         let sum = 0;
         for (let n = 0; n < N; n++) {
             sum += input[n] * Math.cos((Math.PI * k * (2 * n + 1)) / (2 * N));
         }
         const alpha = k === 0 ? 1 / Math.sqrt(2) : 1;
-        out[k] = (2 / N) * alpha * sum;
+        out[k] = scale * alpha * sum;
     }
     return out;
 }
@@ -114,13 +115,14 @@ function dct1d(input) {
 function idct1d(input) {
     const N = 8;
     const out = new Float64Array(N);
+    const scale = Math.sqrt(2 / N);   // ← 修正：从 (2/N) 改为 sqrt(2/N)
     for (let n = 0; n < N; n++) {
         let sum = 0;
         for (let k = 0; k < N; k++) {
             const alpha = k === 0 ? 1 / Math.sqrt(2) : 1;
             sum += alpha * input[k] * Math.cos((Math.PI * k * (2 * n + 1)) / (2 * N));
         }
-        out[n] = (2 / N) * sum;
+        out[n] = scale * sum;
     }
     return out;
 }
@@ -207,16 +209,14 @@ function embedTextWatermark(processor, text) {
                 for (let dx = 0; dx < 8; dx++) {
                     const idx = ((y + dy) * w + (x + dx)) * 4;
                     const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-                    const oldGray = block[dy][dx]; // 原来的灰度值
+                    const oldGray = block[dy][dx];
                     const newGray = newGrayBlock[dy][dx];
-                    // 防止除以 0（若原灰度极低，使用标准比例）
                     let ratioR, ratioG, ratioB;
                     if (oldGray > 0.5) {
                         ratioR = r / oldGray;
                         ratioG = g / oldGray;
                         ratioB = b / oldGray;
                     } else {
-                        // 若原像素几乎全黑，保持原色不变
                         ratioR = 0.299;
                         ratioG = 0.587;
                         ratioB = 0.114;
@@ -228,7 +228,6 @@ function embedTextWatermark(processor, text) {
             }
         }
     }
-    // 注意：data 是 Uint8ClampedArray 引用，直接修改即可
 }
 
 // ==================== 提取文字水印（投票冗余） ====================
@@ -253,7 +252,6 @@ function extractTextWatermark(processor, maxChars = 10) {
             }
             const bit = extractBitFromGrayBlock(block);
             const bitIndex = blockCount % totalBits;
-            // 投票：1 加 1，0 减 1
             votes[bitIndex] += (bit === 1 ? 1 : -1);
             blockCount++;
         }
