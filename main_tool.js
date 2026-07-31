@@ -184,10 +184,11 @@ function embedTextWatermark(processor, text) {
     const bits = textToBits(text);
     const bitLen = bits.length;
     let bitIdx = 0;
+    const log = [];  // 记录每个块的信息
 
     for (let y = 0; y < h - 7; y += 8) {
         for (let x = 0; x < w - 7; x += 8) {
-            // 1. 提取 8×8 灰度块
+            // 提取灰度块
             const block = [];
             for (let dy = 0; dy < 8; dy++) {
                 const row = [];
@@ -199,11 +200,14 @@ function embedTextWatermark(processor, text) {
                 block.push(row);
             }
 
-            // 2. 嵌入比特
             const bit = bits[bitIdx % bitLen];
+            // 计算嵌入前后的 DCT 系数
+            const dctBefore = dct2d(block);
+            const coeffBefore = dctBefore[4][3];
             const newGrayBlock = embedBitInGrayBlock(block, bit);
-            bitIdx++;
-
+            const dctAfter = dct2d(newGrayBlock);
+            const coeffAfter = dctAfter[4][3];
+bitIdx++;
             // 3. 写回 RGB（保持色度比例）
             for (let dy = 0; dy < 8; dy++) {
                 for (let dx = 0; dx < 8; dx++) {
@@ -227,7 +231,13 @@ function embedTextWatermark(processor, text) {
                 }
             }
         }
+        }
     }
+
+    // 在控制台输出日志摘要
+    alert('总块数:', log.length);
+    alert('嵌入比特流 (前20位):', bits.slice(0, 20).join(''));
+    alert('前5块详情:', log.slice(0, 5));
 }
 
 // ==================== 提取文字水印（投票冗余） ====================
@@ -260,7 +270,7 @@ function extractTextWatermark(processor, maxChars = 10) {
     const resultBits = votes.map(v => v > 0 ? 1 : 0);
     return bitsToText(resultBits);
 }
-function debugExtract(processor, maxChars = 20) {
+function debugExtract(processor, maxChars = 10) {
     const data = processor.imageData.data;
     const w = processor.width, h = processor.height;
     const totalBits = maxChars * 8;
