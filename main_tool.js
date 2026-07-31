@@ -260,3 +260,44 @@ function extractTextWatermark(processor, maxChars = 10) {
     const resultBits = votes.map(v => v > 0 ? 1 : 0);
     return bitsToText(resultBits);
 }
+function debugExtract(processor, maxChars = 20) {
+    const data = processor.imageData.data;
+    const w = processor.width, h = processor.height;
+    const totalBits = maxChars * 8;
+    const votes = new Array(totalBits).fill(0);
+    let blockCount = 0;
+    const rawBits = [];
+
+    for (let y = 0; y < h - 7; y += 8) {
+        for (let x = 0; x < w - 7; x += 8) {
+            const block = [];
+            for (let dy = 0; dy < 8; dy++) {
+                const row = [];
+                for (let dx = 0; dx < 8; dx++) {
+                    const idx = ((y + dy) * w + (x + dx)) * 4;
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    row.push(rgbToGray(r, g, b));
+                }
+                block.push(row);
+            }
+            const bit = extractBitFromGrayBlock(block);
+            const bitIndex = blockCount % totalBits;
+            votes[bitIndex] += (bit === 1 ? 1 : -1);
+            rawBits.push(bit);
+            blockCount++;
+        }
+    }
+
+    const resultBits = votes.map(v => v > 0 ? 1 : 0);
+    const text = bitsToText(resultBits);
+
+    console.log('===== 水印提取调试信息 =====');
+    console.log('总可用块数:', blockCount);
+    console.log('需要的总比特数 (maxChars * 8):', totalBits);
+    console.log('投票数组 (前20个):', votes.slice(0, 20));
+    console.log('投票决策后的比特流 (前100位):', resultBits.slice(0, 100).join(''));
+    console.log('提取出的文字:', text);
+    console.log('===============================');
+
+    return { text, votes, resultBits, blockCount };
+}
