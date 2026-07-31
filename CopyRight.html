@@ -378,11 +378,6 @@ if (existingText && existingText.length > 0 && !existingText.includes('�')) {
         const canvas = processor.canvas;
         const width = canvas.width;
         const height = canvas.height;
-        ctx.save();
-        ctx.translate(width / 2, height / 2);
-        ctx.rotate(angle);
-        ctx.translate(-width / 2, -height / 2);
-        ctx.restore();
 
 // ========== 新增：嵌入不可见文字水印 ==========
 const currentImageData = ctx.getImageData(0, 0, width, height);
