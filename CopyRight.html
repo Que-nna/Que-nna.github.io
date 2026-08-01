@@ -330,19 +330,16 @@
         // ==============================================================
         //  ① 核心：handleSubmit —— 下载原图，清空界面（暂不加任何水印）
         // ==============================================================
- 
-async function handleSubmit(imageFile, text) {
+ async function handleSubmit(imageFile, text) {
     if (!imageFile || !text) {
         alert('请上传图片并填写文字');
         return;
     }
-
     const len = text.trim().length;
     if (len < 1 || len > 10) {
         alert('文字长度需在1~10个字符之间');
         return;
     }
-
     try {
         const reader = new FileReader();
         const dataUrl = await new Promise((resolve, reject) => {
@@ -354,41 +351,27 @@ async function handleSubmit(imageFile, text) {
         const processor = new ImageProcessor(dataUrl);
         await processor.load();
 
-        // ---------- ① 检查是否已存在水印（用 debugExtract 显示详细信息） ----------
-        const debugResult = debugExtract(processor, len);  // 传入实际长度，避免猜错
-        const existingText = debugResult.text;
-
+        // ====== 检测已有水印 ======
+        const existingText = extractTextWatermark(processor, 10);
         if (existingText && existingText.length > 0 && !existingText.includes('�')) {
-            // 已有有效水印，询问是否覆盖
-            const confirmOverwrite = confirm(
-                `该图片已带有不可见水印，内容为：「${existingText}」\n是否覆盖？`
-            );
-            if (!confirmOverwrite&&1==0) {
-                return;  // 中止操作
-            }
+            alert(`该图片已带有不可见水印，内容为：「${existingText}」`);
+            // 如果不想继续覆盖，可以 return 终止
+            // 但如果你仍然要覆盖，可以继续执行下面的嵌入，就保留现有逻辑
+            // 这里我们默认继续覆盖（用户可能想更新水印）
         }
 
-        // ---------- ② 嵌入新水印 ----------
-        embedTextWatermark(processor, text);  // 内部会弹窗显示嵌入日志（可注释）
-        processor.ctx.putImageData(processor.imageData, 0, 0);
+        // 继续原有嵌入和下载流程（略）
+        const ctx = processor.ctx;
+        const canvas = processor.canvas;
+        const width = canvas.width, height = canvas.height;
+        const currentImageData = ctx.getImageData(0, 0, width, height);
+        processor.imageData = currentImageData;
+        embedTextWatermark(processor, text);
+        ctx.putImageData(processor.imageData, 0, 0);
 
-        // ---------- ③ 立即验证提取（用 debugExtract 显示结果） ----------
-        const verifyResult = debugExtract(processor, len);
-        const extracted = verifyResult.text;
-
-        // 检查提取结果是否与原文一致
-        if (extracted === text) {
-            alert(`✅ 水印嵌入成功！提取结果：「${extracted}」`);
-        } else {
-            alert(`❌ 嵌入验证失败！\n期望：「${text}」\n实际：「${extracted}」\n请检查调试信息。`);
-            // 仍然继续下载，但提示风险
-        }
-
-        // ---------- ④ 导出并下载 ----------
         const mimeType = imageFile.type || 'image/png';
         const quality = mimeType === 'image/jpeg' ? 0.92 : 1.0;
-        const resultDataUrl = processor.canvas.toDataURL(mimeType, quality);
-
+        const resultDataUrl = canvas.toDataURL(mimeType, quality);
         const a = document.createElement('a');
         a.href = resultDataUrl;
         a.download = imageFile.name || 'watermarked.png';
@@ -396,22 +379,17 @@ async function handleSubmit(imageFile, text) {
         a.click();
         document.body.removeChild(a);
 
-        // ---------- ⑤ 清空界面 ----------
-        const uploadArea = document.getElementById('uploadArea');
-        const previewImg = document.getElementById('previewImg');
-        const fileInput = document.getElementById('fileInput');
-        const textInput = document.getElementById('textInput');
-        uploadArea.classList.remove('has-preview');
-        previewImg.src = '';
-        fileInput.value = '';
-        textInput.value = '';
+        // 清空界面...
+        document.getElementById('uploadArea').classList.remove('has-preview');
+        document.getElementById('previewImg').src = '';
+        document.getElementById('fileInput').value = '';
+        document.getElementById('textInput').value = '';
 
     } catch (error) {
         alert('图片处理失败，请重试');
-        alert(error);
+        console.error(error);
     }
 }
-
 
 
 
@@ -470,3 +448,4 @@ async function handleSubmit(imageFile, text) {
     </script>
 
 </body>
+</html>
