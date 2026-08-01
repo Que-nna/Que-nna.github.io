@@ -164,9 +164,15 @@ function embedBitInGrayBlock(block, bit) {
     let coeff = dct[u][v];
     const parity = Math.round(coeff) % 2;
     if (parity !== bit) {
-        coeff = Math.round(coeff) + (bit === 1 ? 1 : -1);
-        dct[u][v] = coeff;
+    // 增大调整幅度，例如改为 ±3（也可用 ±5）
+    const delta = 5;   // 可调整，建议3~5
+    coeff = Math.round(coeff) + (bit === 1 ? delta : -delta);
+    // 保险：确保新的四舍五入奇偶确实等于目标 bit（防止刚好越过边界）
+    while (Math.round(coeff) % 2 !== bit) {
+        coeff += (bit === 1 ? 1 : -1);
     }
+    dct[u][v] = coeff;
+}
     const idct = idct2d(dct);
     return idct.map(row => row.map(val => Math.round(Math.min(255, Math.max(0, val)))));
 }
