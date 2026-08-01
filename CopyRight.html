@@ -303,7 +303,7 @@
     <div class="container">
 
         <!-- 标题：水印添加 -->
-        <h1 class="title anim anim-1">🖋️ 水印添加</h1>
+        <h1 class="title anim anim-1">🖋️ 水印添加，但是bug还没改完</h1>
 
         <!-- 上传区域（圆角方形） -->
         <div class="upload-area anim anim-2" id="uploadArea">
@@ -331,17 +331,12 @@
         //  ① 核心：handleSubmit —— 下载原图，清空界面（暂不加任何水印）
         // ==============================================================
  
-
-
-
 async function handleSubmit(imageFile, text) {
-    // 1. 检查图片和文字是否都存在
     if (!imageFile || !text) {
         alert('请上传图片并填写文字');
         return;
     }
 
-    // 2. 检查文字长度（1~15个字符）
     const len = text.trim().length;
     if (len < 1 || len > 10) {
         alert('文字长度需在1~10个字符之间');
@@ -349,7 +344,6 @@ async function handleSubmit(imageFile, text) {
     }
 
     try {
-        // 3. 读取图片为 Data URL
         const reader = new FileReader();
         const dataUrl = await new Promise((resolve, reject) => {
             reader.onload = () => resolve(reader.result);
@@ -357,41 +351,44 @@ async function handleSubmit(imageFile, text) {
             reader.readAsDataURL(imageFile);
         });
 
-        // 4. 用 ImageProcessor 加载图片
         const processor = new ImageProcessor(dataUrl);
         await processor.load();
-// ===== 新增：检查是否已存在文字隐水印 =====
-// 假设最多10个字，传入长度10，尝试提取
-const existingText = extractTextWatermark(processor, 10);
-// 如果提取出的文字非空且不是乱码（简单判断长度>0且不含稀奇字符），视为已有水印
-if (existingText && existingText.length > 0 && !existingText.includes('�')) {
-    alert(`该图片已带有不可见水印，内容为：「${existingText}」`);
-    debugExtract(processor, 10);
-}
-        // 获取原始图片像素数据（用于采样背景亮度）
-        const imageData = processor.imageData;
-        const data = imageData.data;
-        const imgWidth = imageData.width;
-        const imgHeight = imageData.height;
 
-        // 5. 绘制平铺水印文字
-        const ctx = processor.ctx;
-        const canvas = processor.canvas;
-        const width = canvas.width;
-        const height = canvas.height;
+        // ---------- ① 检查是否已存在水印（用 debugExtract 显示详细信息） ----------
+        const debugResult = debugExtract(processor, len);  // 传入实际长度，避免猜错
+        const existingText = debugResult.text;
 
-// ========== 新增：嵌入不可见文字水印 ==========
-const currentImageData = ctx.getImageData(0, 0, width, height);
-processor.imageData = currentImageData;
-embedTextWatermark(processor, text);  // 直接传入用户输入的文字（最多10个字）
-ctx.putImageData(processor.imageData, 0, 0);
-// ============================================
-        // 6. 导出为 Data URL
+        if (existingText && existingText.length > 0 && !existingText.includes('�')) {
+            // 已有有效水印，询问是否覆盖
+            const confirmOverwrite = confirm(
+                `该图片已带有不可见水印，内容为：「${existingText}」\n是否覆盖？`
+            );
+            if (!confirmOverwrite&&1==0) {
+                return;  // 中止操作
+            }
+        }
+
+        // ---------- ② 嵌入新水印 ----------
+        embedTextWatermark(processor, text);  // 内部会弹窗显示嵌入日志（可注释）
+        processor.ctx.putImageData(processor.imageData, 0, 0);
+
+        // ---------- ③ 立即验证提取（用 debugExtract 显示结果） ----------
+        const verifyResult = debugExtract(processor, len);
+        const extracted = verifyResult.text;
+
+        // 检查提取结果是否与原文一致
+        if (extracted === text) {
+            alert(`✅ 水印嵌入成功！提取结果：「${extracted}」`);
+        } else {
+            alert(`❌ 嵌入验证失败！\n期望：「${text}」\n实际：「${extracted}」\n请检查调试信息。`);
+            // 仍然继续下载，但提示风险
+        }
+
+        // ---------- ④ 导出并下载 ----------
         const mimeType = imageFile.type || 'image/png';
         const quality = mimeType === 'image/jpeg' ? 0.92 : 1.0;
-        const resultDataUrl = canvas.toDataURL(mimeType, quality);
+        const resultDataUrl = processor.canvas.toDataURL(mimeType, quality);
 
-        // 7. 自动下载
         const a = document.createElement('a');
         a.href = resultDataUrl;
         a.download = imageFile.name || 'watermarked.png';
@@ -399,12 +396,11 @@ ctx.putImageData(processor.imageData, 0, 0);
         a.click();
         document.body.removeChild(a);
 
-        // 8. 清空界面
+        // ---------- ⑤ 清空界面 ----------
         const uploadArea = document.getElementById('uploadArea');
         const previewImg = document.getElementById('previewImg');
         const fileInput = document.getElementById('fileInput');
         const textInput = document.getElementById('textInput');
-
         uploadArea.classList.remove('has-preview');
         previewImg.src = '';
         fileInput.value = '';
@@ -412,10 +408,9 @@ ctx.putImageData(processor.imageData, 0, 0);
 
     } catch (error) {
         alert('图片处理失败，请重试');
-        alert (error);
-        console.error(error);
+        alert(error);
     }
-}
+
 
 
 

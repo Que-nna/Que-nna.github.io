@@ -100,7 +100,7 @@ function bitsToText(bits) {
 function dct1d(input) {
     const N = 8;
     const out = new Float64Array(N);
-    const scale = Math.sqrt(2 / N);   // ← 修正：从 (2/N) 改为 sqrt(2/N)
+    const scale = Math.sqrt(2 / N);
     for (let k = 0; k < N; k++) {
         let sum = 0;
         for (let n = 0; n < N; n++) {
@@ -115,7 +115,7 @@ function dct1d(input) {
 function idct1d(input) {
     const N = 8;
     const out = new Float64Array(N);
-    const scale = Math.sqrt(2 / N);   // ← 修正：从 (2/N) 改为 sqrt(2/N)
+    const scale = Math.sqrt(2 / N);
     for (let n = 0; n < N; n++) {
         let sum = 0;
         for (let k = 0; k < N; k++) {
@@ -134,7 +134,6 @@ function dct2d(matrix) {
         const col = rows.map(row => row[i]);
         return dct1d(col);
     });
-    // 转置
     return Array.from({ length: N }, (_, i) =>
         Array.from({ length: N }, (_, j) => result[j][i])
     );
@@ -177,14 +176,14 @@ function extractBitFromGrayBlock(block) {
     return Math.round(dct[4][3]) % 2;
 }
 
-// ==================== 嵌入文字水印（保持色度比例，无色偏） ====================
+// ==================== 嵌入文字水印（含调试日志，所有信息集中一个 alert） ====================
 function embedTextWatermark(processor, text) {
     const data = processor.imageData.data;
     const w = processor.width, h = processor.height;
     const bits = textToBits(text);
     const bitLen = bits.length;
     let bitIdx = 0;
-    const log = [];  // 记录每个块的信息
+    const log = [];  // 记录每个块的详细信息
 
     for (let y = 0; y < h - 7; y += 8) {
         for (let x = 0; x < w - 7; x += 8) {
@@ -201,14 +200,22 @@ function embedTextWatermark(processor, text) {
             }
 
             const bit = bits[bitIdx % bitLen];
-            // 计算嵌入前后的 DCT 系数
             const dctBefore = dct2d(block);
             const coeffBefore = dctBefore[4][3];
             const newGrayBlock = embedBitInGrayBlock(block, bit);
             const dctAfter = dct2d(newGrayBlock);
             const coeffAfter = dctAfter[4][3];
-bitIdx++;
-            // 3. 写回 RGB（保持色度比例）
+
+            log.push({
+                blockX: x, blockY: y,
+                bit: bit,
+                coeffBefore: coeffBefore,
+                coeffAfter: coeffAfter,
+                roundedBefore: Math.round(coeffBefore),
+                roundedAfter: Math.round(coeffAfter)
+            });
+
+            // 写回 RGB（保持色度比例）
             for (let dy = 0; dy < 8; dy++) {
                 for (let dx = 0; dx < 8; dx++) {
                     const idx = ((y + dy) * w + (x + dx)) * 4;
@@ -230,46 +237,28 @@ bitIdx++;
                     data[idx + 2] = Math.round(Math.min(255, Math.max(0, newGray * ratioB)));
                 }
             }
+            bitIdx++;
         }
     }
 
-    // 在控制台输出日志摘要
-    alert('总块数:', log.length);
-    alert('嵌入比特流 (前20位):', bits.slice(0, 20).join(''));
-    alert('前5块详情:', log.slice(0, 5));
+    // ---------- 将所有调试信息合并到一个 alert ----------
+    const first5 = log.slice(0, 5).map(e =>
+        `块(${e.blockX},${e.blockY}) bit=${e.bit} 系数: ${e.coeffBefore.toFixed(2)} → ${e.coeffAfter.toFixed(2)} (四舍五入奇偶: ${e.roundedBefore}→${e.roundedAfter})`
+    ).join('\n');
+
+    const msg = `===== 嵌入调试信息 =====
+总块数: ${log.length}
+嵌入比特流 (前20位): ${bits.slice(0, 20).join('')}
+前5块详情:
+${first5}
+===============================`;
+    alert(msg);
+
+    return log;  // 便于外部进一步分析
 }
 
-// ==================== 提取文字水印（投票冗余） ====================
+// ==================== 提取文字水印（投票冗余，含调试 alert） ====================
 function extractTextWatermark(processor, maxChars = 10) {
-    const data = processor.imageData.data;
-    const w = processor.width, h = processor.height;
-    const totalBits = maxChars * 8;
-    const votes = new Array(totalBits).fill(0);
-    let blockCount = 0;
-
-    for (let y = 0; y < h - 7; y += 8) {
-        for (let x = 0; x < w - 7; x += 8) {
-            const block = [];
-            for (let dy = 0; dy < 8; dy++) {
-                const row = [];
-                for (let dx = 0; dx < 8; dx++) {
-                    const idx = ((y + dy) * w + (x + dx)) * 4;
-                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-                    row.push(rgbToGray(r, g, b));
-                }
-                block.push(row);
-            }
-            const bit = extractBitFromGrayBlock(block);
-            const bitIndex = blockCount % totalBits;
-            votes[bitIndex] += (bit === 1 ? 1 : -1);
-            blockCount++;
-        }
-    }
-
-    const resultBits = votes.map(v => v > 0 ? 1 : 0);
-    return bitsToText(resultBits);
-}
-function debugExtract(processor, maxChars = 10) {
     const data = processor.imageData.data;
     const w = processor.width, h = processor.height;
     const totalBits = maxChars * 8;
@@ -299,11 +288,21 @@ function debugExtract(processor, maxChars = 10) {
 
     const resultBits = votes.map(v => v > 0 ? 1 : 0);
     const text = bitsToText(resultBits);
-    alert('总可用块数:', blockCount);
-    alert('需要的总比特数 (maxChars * 8):', totalBits);
-    alert('投票数组 (前20个):', votes.slice(0, 20));
-    alert('投票决策后的比特流 (前100位):', resultBits.slice(0, 100).join(''));
-    alert('提取出的文字:', text);
 
-    return { text, votes, resultBits, blockCount };
+    // ---------- 合并所有提取信息到一个 alert ----------
+    const msg = `===== 提取调试信息 =====
+总可用块数: ${blockCount}
+需要的总比特数 (maxChars*8): ${totalBits}
+投票数组 (前20): [${votes.slice(0, 20).join(', ')}]
+投票决策后的比特流 (前100位): ${resultBits.slice(0, 100).join('')}
+提取出的文字 (原始): ${text}
+提取出的文字 (转义显示): ${JSON.stringify(text)}
+原始 rawBits 前20: [${rawBits.slice(0, 20).join(', ')}]
+===============================`;
+    alert(msg);
+
+    return { text, votes, resultBits, blockCount, rawBits };
 }
+
+// 为了便捷，额外提供一个调试函数（与 extractTextWatermark 类似，但更详细，已在上面合并）
+// 你可以直接使用 extractTextWatermark，它已经包含完整 alert。
