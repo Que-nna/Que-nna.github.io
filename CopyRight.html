@@ -3,449 +3,378 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>水印添加</title>
+    <title>DCT 隐写水印工具</title>
     <style>
-        /* ---------- 全局重置 ---------- */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            min-height: 100vh; display: flex; justify-content: center; align-items: center;
             background: linear-gradient(145deg, #f5fbf9 0%, #e6f3ef 100%);
-            font-family: 'Segoe UI', 'PingFang SC', Roboto, system-ui, -apple-system, sans-serif;
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, system-ui, sans-serif;
             padding: 20px;
         }
-
-        /* ---------- 主容器 ---------- */
         .container {
-            width: 100%;
-            max-width: 420px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 24px;
-            padding: 30px 24px 36px;
-            background: rgba(255, 255, 255, 0.70);
-            backdrop-filter: blur(8px);
-            border-radius: 48px;
-            box-shadow: 0 20px 50px rgba(60, 120, 100, 0.13);
-            border: 1px solid rgba(255, 255, 255, 0.60);
+            width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center;
+            gap: 24px; padding: 30px 24px 36px; background: rgba(255,255,255,0.70);
+            backdrop-filter: blur(8px); border-radius: 48px;
+            box-shadow: 0 20px 50px rgba(60,120,100,0.13);
+            border: 1px solid rgba(255,255,255,0.60);
         }
-
-        /* ---------- 渐入动画 ---------- */
         @keyframes fadeUp {
-            0% {
-                opacity: 0;
-                transform: translateY(28px) scale(0.96);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+            0% { opacity: 0; transform: translateY(28px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-
-        .anim {
-            animation: fadeUp 0.70s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-            opacity: 0;
-        }
-
-        .anim-1 {
-            animation-delay: 0.05s;
-        }
-        .anim-2 {
-            animation-delay: 0.18s;
-        }
-        .anim-3 {
-            animation-delay: 0.31s;
-        }
-        .anim-4 {
-            animation-delay: 0.44s;
-        }
-
-        /* ---------- 标题 ---------- */
+        .anim { animation: fadeUp 0.70s cubic-bezier(0.22,0.61,0.36,1) forwards; opacity: 0; }
+        .anim-1 { animation-delay: 0.05s; } .anim-2 { animation-delay: 0.18s; } .anim-3 { animation-delay: 0.31s; } .anim-4 { animation-delay: 0.44s; }
         .title {
-            font-size: 28px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            color: #1f5a48;
-            background: rgba(70, 160, 135, 0.12);
-            padding: 10px 36px;
-            border-radius: 60px;
-            border: 1.5px solid rgba(70, 160, 135, 0.20);
-            text-align: center;
-            width: auto;
-            backdrop-filter: blur(4px);
+            font-size: 28px; font-weight: 600; letter-spacing: 0.5px; color: #1f5a48;
+            background: rgba(70,160,135,0.12); padding: 10px 36px; border-radius: 60px;
+            border: 1.5px solid rgba(70,160,135,0.20); text-align: center;
         }
-
-        /* ---------- 上传区域（圆角方形） ---------- */
         .upload-area {
-            width: 100%;
-            aspect-ratio: 1/1;
-            max-width: 300px;
-            border-radius: 28px;
-            /* 圆角方形 */
-            border: 2.5px dashed #8fcbc0;
-            background: rgba(240, 248, 245, 0.60);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: background 0.25s, border-color 0.25s, transform 0.2s;
-            position: relative;
-            overflow: hidden;
-            margin: 0 auto;
-            backdrop-filter: blur(2px);
-            box-shadow: 0 6px 20px rgba(70, 160, 135, 0.08);
+            width: 100%; aspect-ratio: 1/1; max-width: 300px; border-radius: 28px;
+            border: 2.5px dashed #8fcbc0; background: rgba(240,248,245,0.60);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; transition: background 0.25s, border-color 0.25s, transform 0.2s;
+            position: relative; overflow: hidden; margin: 0 auto;
+            box-shadow: 0 6px 20px rgba(70,160,135,0.08);
         }
-
-        .upload-area:hover {
-            background: rgba(230, 248, 242, 0.80);
-            border-color: #6bb8a8;
-            transform: scale(1.01);
-        }
-
-        .upload-area:active {
-            transform: scale(0.97);
-        }
-
-        .upload-area .icon {
-            font-size: 44px;
-            line-height: 1;
-            color: #6bb8a8;
-            margin-bottom: 4px;
-            pointer-events: none;
-            user-select: none;
-        }
-
-        .upload-area .hint {
-            font-size: 14px;
-            color: #6a9e8e;
-            pointer-events: none;
-            user-select: none;
-            letter-spacing: 0.3px;
-            padding: 0 16px;
-            text-align: center;
-        }
-
-        .upload-area .hint small {
-            display: block;
-            font-size: 11px;
-            color: #96bdb0;
-            margin-top: 2px;
-        }
-
-        /* 预览图（圆角方形） */
+        .upload-area:hover { background: rgba(230,248,242,0.80); border-color: #6bb8a8; transform: scale(1.01); }
+        .upload-area:active { transform: scale(0.97); }
+        .upload-area .icon { font-size: 44px; color: #6bb8a8; margin-bottom: 4px; pointer-events: none; }
+        .upload-area .hint { font-size: 14px; color: #6a9e8e; pointer-events: none; text-align: center; }
+        .upload-area .hint small { display: block; font-size: 11px; color: #96bdb0; margin-top: 2px; }
         .upload-area .preview {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 28px;
-            display: none;
-            background: #f0f8f5;
+            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+            border-radius: 28px; display: none; background: #f0f8f5;
         }
-
-        .upload-area.has-preview .preview {
-            display: block;
-        }
-        .upload-area.has-preview .icon,
-        .upload-area.has-preview .hint {
-            display: none;
-        }
-
+        .upload-area.has-preview .preview { display: block; }
+        .upload-area.has-preview .icon, .upload-area.has-preview .hint { display: none; }
         .upload-area input[type="file"] {
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            cursor: pointer;
-            border-radius: 28px;
-            z-index: 2;
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; border-radius: 28px; z-index: 2;
         }
-
-        /* ---------- 输入框 ---------- */
         .input-field {
-            width: 100%;
-            padding: 16px 22px;
-            border-radius: 60px;
-            border: 1.5px solid #d0e8e0;
-            background: rgba(255, 255, 255, 0.60);
-            backdrop-filter: blur(4px);
-            font-size: 16px;
-            color: #1f4a3e;
-            outline: none;
-            transition: border-color 0.25s, box-shadow 0.25s;
-            font-family: inherit;
+            width: 100%; padding: 16px 22px; border-radius: 60px; border: 1.5px solid #d0e8e0;
+            background: rgba(255,255,255,0.60); font-size: 16px; color: #1f4a3e;
+            outline: none; transition: border-color 0.25s, box-shadow 0.25s; font-family: inherit;
         }
-
-        .input-field::placeholder {
-            color: #b0ccc0;
-            font-weight: 300;
-            letter-spacing: 0.3px;
-        }
-
-        .input-field:focus {
-            border-color: #6bb8a8;
-            box-shadow: 0 0 0 4px rgba(70, 160, 135, 0.10);
-        }
-
-        /* ---------- 提交按钮 ---------- */
+        .input-field::placeholder { color: #b0ccc0; font-weight: 300; letter-spacing: 0.3px; }
+        .input-field:focus { border-color: #6bb8a8; box-shadow: 0 0 0 4px rgba(70,160,135,0.10); }
         .btn-submit {
-            width: 100%;
-            padding: 16px 22px;
-            border-radius: 60px;
-            border: none;
-            background: linear-gradient(135deg, #4a9e8a, #3a8a76);
-            color: #fff;
-            font-size: 18px;
-            font-weight: 500;
-            letter-spacing: 0.8px;
-            cursor: pointer;
+            width: 100%; padding: 16px 22px; border-radius: 60px; border: none;
+            background: linear-gradient(135deg, #4a9e8a, #3a8a76); color: #fff;
+            font-size: 18px; font-weight: 500; letter-spacing: 0.8px; cursor: pointer;
             transition: transform 0.2s, box-shadow 0.25s, background 0.3s;
-            box-shadow: 0 8px 24px rgba(70, 160, 135, 0.25);
-            font-family: inherit;
+            box-shadow: 0 8px 24px rgba(70,160,135,0.25); font-family: inherit;
         }
-
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 32px rgba(70, 160, 135, 0.32);
-            background: linear-gradient(135deg, #52ae98, #3f9a84);
-        }
-
-        .btn-submit:active {
-            transform: scale(0.97);
-            box-shadow: 0 4px 12px rgba(70, 160, 135, 0.20);
-        }
-
-        /* ---------- 响应式 ---------- */
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(70,160,135,0.32); background: linear-gradient(135deg, #52ae98, #3f9a84); }
+        .btn-submit:active { transform: scale(0.97); box-shadow: 0 4px 12px rgba(70,160,135,0.20); }
         @media (max-width: 480px) {
-            .container {
-                padding: 24px 18px 30px;
-                gap: 20px;
-                border-radius: 36px;
-            }
-            .title {
-                font-size: 22px;
-                padding: 8px 28px;
-            }
-            .upload-area {
-                max-width: 220px;
-                border-radius: 24px;
-            }
-            .upload-area .preview {
-                border-radius: 24px;
-            }
-            .upload-area input[type="file"] {
-                border-radius: 24px;
-            }
-            .upload-area .icon {
-                font-size: 34px;
-            }
-            .upload-area .hint {
-                font-size: 12px;
-            }
-            .input-field {
-                font-size: 15px;
-                padding: 14px 18px;
-            }
-            .btn-submit {
-                font-size: 16px;
-                padding: 14px 18px;
-            }
-        }
-
-        @media (max-width: 380px) {
-            .container {
-                padding: 18px 14px 24px;
-                gap: 16px;
-                border-radius: 28px;
-            }
-            .title {
-                font-size: 18px;
-                padding: 6px 20px;
-            }
-            .upload-area {
-                max-width: 160px;
-                border-radius: 20px;
-            }
-            .upload-area .preview {
-                border-radius: 20px;
-            }
-            .upload-area input[type="file"] {
-                border-radius: 20px;
-            }
-            .upload-area .icon {
-                font-size: 26px;
-            }
-            .upload-area .hint {
-                font-size: 10px;
-            }
-            .input-field {
-                font-size: 13px;
-                padding: 12px 14px;
-            }
-            .btn-submit {
-                font-size: 14px;
-                padding: 12px 14px;
-            }
+            .container { padding: 24px 18px 30px; gap: 20px; border-radius: 36px; }
+            .title { font-size: 22px; padding: 8px 28px; }
+            .upload-area { max-width: 220px; border-radius: 24px; }
+            .upload-area .preview { border-radius: 24px; }
+            .upload-area input[type="file"] { border-radius: 24px; }
+            .upload-area .icon { font-size: 34px; }
+            .upload-area .hint { font-size: 12px; }
+            .input-field { font-size: 15px; padding: 14px 18px; }
+            .btn-submit { font-size: 16px; padding: 14px 18px; }
         }
     </style>
 </head>
 <body>
-
     <div class="container">
+        <h1 class="title anim anim-1">🖋️ 隐写水印</h1>
 
-        <!-- 标题：水印添加 -->
-        <h1 class="title anim anim-1">🖋️ 水印添加，但是bug还没改完</h1>
-
-        <!-- 上传区域（圆角方形） -->
         <div class="upload-area anim anim-2" id="uploadArea">
             <img class="preview" id="previewImg" alt="预览">
             <span class="icon">📷</span>
-            <span class="hint">
-                点击上传图片
-                <small>JPG / PNG / GIF / WebP …</small>
-            </span>
+            <span class="hint">点击上传图片<small>JPG / PNG / GIF / WebP …</small></span>
             <input type="file" id="fileInput" accept="image/*">
         </div>
 
-        <!-- 输入框：更新提示语 -->
-        <input class="input-field anim anim-3" id="textInput" type="text" placeholder="写下作者的签名和版权声明" autocomplete="off">
+        <input class="input-field anim anim-3" id="textInput" type="text"
+               placeholder="输入要隐藏的文字（1~50个字符）" autocomplete="off" maxlength="50">
 
-        <!-- 提交按钮 -->
-        <button class="btn-submit anim anim-4" id="submitBtn">提交</button>
-
+        <button class="btn-submit anim anim-4" id="submitBtn">嵌入并下载图片</button>
     </div>
-    <script src="main_tool.js"></script>
 
     <script>
-
-        // ==============================================================
-        //  ① 核心：handleSubmit —— 下载原图，清空界面（暂不加任何水印）
-        // ==============================================================
- async function handleSubmit(imageFile, text) {
-    if (!imageFile || !text) {
-        alert('请上传图片并填写文字');
-        return;
-    }
-    const len = text.trim().length;
-    if (len < 1 || len > 10) {
-        alert('文字长度需在1~10个字符之间');
-        return;
-    }
-    try {
-        const reader = new FileReader();
-        const dataUrl = await new Promise((resolve, reject) => {
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(imageFile);
-        });
-
-        const processor = new ImageProcessor(dataUrl);
-        await processor.load();
-
-        // ====== 检测已有水印 ======
-        const existingText = extractTextWatermark(processor, 10);
-        if (existingText && existingText.length > 0 && !existingText.includes('�')) {
-            alert(`该图片已带有不可见水印，内容为：「${existingText}」`);
-            // 如果不想继续覆盖，可以 return 终止
-            // 但如果你仍然要覆盖，可以继续执行下面的嵌入，就保留现有逻辑
-            // 这里我们默认继续覆盖（用户可能想更新水印）
+    // ==================== 图像处理器（避免色彩校正） ====================
+    class ImageProcessor {
+        constructor() {
+            this.canvas = document.createElement('canvas');
+            this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+            this.imageData = null;
         }
 
-        // 继续原有嵌入和下载流程（略）
-        const ctx = processor.ctx;
-        const canvas = processor.canvas;
-        const width = canvas.width, height = canvas.height;
-        const currentImageData = ctx.getImageData(0, 0, width, height);
-        processor.imageData = currentImageData;
-        embedTextWatermark(processor, text);
-        ctx.putImageData(processor.imageData, 0, 0);
+        async loadFromFile(file) {
+            const bitmap = await createImageBitmap(file, {
+                colorSpaceConversion: 'none',
+                premultiplyAlpha: 'none'
+            });
+            this.canvas.width = bitmap.width;
+            this.canvas.height = bitmap.height;
+            this.ctx.drawImage(bitmap, 0, 0);
+            this.imageData = this.ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+            bitmap.close();
+            return this;
+        }
 
-        const mimeType = imageFile.type || 'image/png';
-        const quality = mimeType === 'image/jpeg' ? 0.92 : 1.0;
-        const resultDataUrl = canvas.toDataURL(mimeType, quality);
-        const a = document.createElement('a');
-        a.href = resultDataUrl;
-        a.download = imageFile.name || 'watermarked.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        getPixel(x, y) {
+            const idx = (y * this.width + x) * 4;
+            const d = this.imageData.data;
+            return { r: d[idx], g: d[idx+1], b: d[idx+2], a: d[idx+3] };
+        }
 
-        // 清空界面...
+        setPixel(x, y, r, g, b, a = 255) {
+            const idx = (y * this.width + x) * 4;
+            const d = this.imageData.data;
+            d[idx] = r; d[idx+1] = g; d[idx+2] = b; d[idx+3] = a;
+        }
+
+        toDataURL(type = 'image/png') {
+            this.ctx.putImageData(this.imageData, 0, 0);
+            return this.canvas.toDataURL(type);
+        }
+
+        get width() { return this.imageData?.width || 0; }
+        get height() { return this.imageData?.height || 0; }
+    }
+
+    // ==================== 文字 ↔ 比特 ====================
+    function textToBits(text) {
+        const bytes = new TextEncoder().encode(text);
+        const bits = [];
+        for (const b of bytes) for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1);
+        return bits;
+    }
+
+    function bitsToText(bits) {
+        const bytes = [];
+        for (let i = 0; i < bits.length; i += 8) {
+            let byte = 0;
+            for (let j = 0; j < 8; j++) byte = (byte << 1) | (bits[i+j] || 0);
+            bytes.push(byte);
+        }
+        return new TextDecoder().decode(new Uint8Array(bytes));
+    }
+
+    // ==================== DCT 8x8 正交变换 ====================
+    function buildDCTMatrix(N) {
+        const matrix = [], scale = Math.sqrt(2/N);
+        for (let k = 0; k < N; k++) {
+            const row = [], ck = k === 0 ? 1/Math.sqrt(2) : 1;
+            for (let n = 0; n < N; n++) row.push(ck * Math.cos((Math.PI*(2*n+1)*k)/(2*N)));
+            matrix.push(row.map(v => v * scale));
+        }
+        return matrix;
+    }
+    const DCT8 = buildDCTMatrix(8);
+    const IDCT8 = DCT8[0].map((_, n) => DCT8.map(row => row[n]));
+
+    function dct1d(vec) { return DCT8.map(row => row.reduce((s,v,n)=> s + v*vec[n], 0)); }
+    function idct1d(coeff) { return IDCT8.map(row => row.reduce((s,v,n)=> s + v*coeff[n], 0)); }
+    function dct2d(block) {
+        const temp = block.map(row => dct1d(row));
+        const cols = [];
+        for (let c=0; c<8; c++) cols.push(dct1d(temp.map(r => r[c])));
+        return Array.from({length:8}, (_,i) => Array.from({length:8}, (_,j) => cols[j][i]));
+    }
+    function idct2d(coeff) {
+        const temp = coeff.map(row => idct1d(row));
+        const cols = [];
+        for (let c=0; c<8; c++) cols.push(idct1d(temp.map(r => r[c])));
+        return Array.from({length:8}, (_,i) => Array.from({length:8}, (_,j) => cols[j][i]));
+    }
+
+    // ==================== 嵌入与提取 ====================
+    const BLOCK = 8, LEN_BITS = 16, ALPHA = 5;
+
+    function embedMessage(processor, secretText) {
+        const w = processor.width, h = processor.height;
+        const numBlocksX = Math.floor(w / BLOCK);
+        const numBlocksY = Math.floor(h / BLOCK);
+        const totalBlocks = numBlocksX * numBlocksY;
+
+        const red = new Float64Array(w * h);
+        for (let y=0; y<h; y++) for (let x=0; x<w; x++) red[y*w+x] = processor.getPixel(x,y).r;
+
+        const msgBits = textToBits(secretText);
+        const lenBits = [];
+        for (let i = LEN_BITS-1; i >=0; i--) lenBits.push((msgBits.length >> i) & 1);
+        const allBits = lenBits.concat(msgBits);
+        if (allBits.length > totalBlocks) throw new Error('信息过长');
+
+        let idx = 0;
+        for (let blockY = 0; blockY < numBlocksY; blockY++) {
+            for (let blockX = 0; blockX < numBlocksX; blockX++) {
+                if (idx >= allBits.length) break;
+                const block = [];
+                for (let y=0; y<BLOCK; y++) {
+                    const row = [];
+                    const py = blockY * BLOCK + y;
+                    for (let x=0; x<BLOCK; x++) row.push(red[py*w + blockX*BLOCK + x]);
+                    block.push(row);
+                }
+                const dct = dct2d(block);
+                const a = dct[4][1], b = dct[3][2];
+                const bit = allBits[idx];
+
+                if (bit === 0) {
+                    if (a <= b) {
+                        dct[4][1] = b;
+                        dct[3][2] = a - ALPHA;
+                    }
+                } else {
+                    if (a >= b) {
+                        dct[4][1] = b - ALPHA;
+                        dct[3][2] = a;
+                    }
+                }
+
+                const mod = idct2d(dct);
+                for (let y=0; y<BLOCK; y++) {
+                    const py = blockY * BLOCK + y;
+                    for (let x=0; x<BLOCK; x++) {
+                        let val = Math.round(mod[y][x]);
+                        val = Math.max(0, Math.min(255, val));
+                        red[py*w + blockX*BLOCK + x] = val;
+                    }
+                }
+                idx++;
+            }
+            if (idx >= allBits.length) break;
+        }
+
+        for (let y=0; y<h; y++) for (let x=0; x<w; x++) {
+            const {g,b} = processor.getPixel(x,y);
+            processor.setPixel(x, y, red[y*w+x], g, b, 255);
+        }
+        return processor.toDataURL('image/png');
+    }
+
+    function extractMessage(processor) {
+        const w = processor.width, h = processor.height;
+        const numBlocksX = Math.floor(w / BLOCK);
+        const numBlocksY = Math.floor(h / BLOCK);
+        const totalBlocks = numBlocksX * numBlocksY;
+        if (totalBlocks < LEN_BITS) return null;
+
+        const red = new Float64Array(w * h);
+        for (let y=0; y<h; y++) for (let x=0; x<w; x++) red[y*w+x] = processor.getPixel(x,y).r;
+
+        const bits = [];
+        for (let blockY = 0; blockY < numBlocksY; blockY++) {
+            for (let blockX = 0; blockX < numBlocksX; blockX++) {
+                const block = [];
+                for (let y=0; y<BLOCK; y++) {
+                    const row = [];
+                    const py = blockY * BLOCK + y;
+                    for (let x=0; x<BLOCK; x++) row.push(red[py*w + blockX*BLOCK + x]);
+                    block.push(row);
+                }
+                const dct = dct2d(block);
+                const bit = dct[4][1] > dct[3][2] ? 0 : 1;
+                bits.push(bit);
+
+                if (bits.length === LEN_BITS) {
+                    let msgLen = 0;
+                    for (let i=0; i<LEN_BITS; i++) msgLen = (msgLen<<1) | bits[i];
+                    if (msgLen <= 0 || msgLen > (totalBlocks - LEN_BITS)) return null;
+                }
+                if (bits.length >= LEN_BITS) {
+                    const msgLen = bits.slice(0, LEN_BITS).reduce((a,b)=>(a<<1)|b,0);
+                    if (bits.length - LEN_BITS >= msgLen) {
+                        return bitsToText(bits.slice(LEN_BITS, LEN_BITS + msgLen));
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    // ==================== UI 交互 ====================
+    async function handleSubmit(file, text) {
+        if (!file) return alert('请上传图片');
+        const trimmed = text.trim();
+        if (trimmed.length < 1 || trimmed.length > 50) return alert('文字长度需在1~50个字符之间');
+
+        try {
+            // 1. 加载原图
+            const processor = new ImageProcessor();
+            await processor.loadFromFile(file);
+
+            // 2. 检测已有水印
+            const existing = extractMessage(processor);
+            if (existing) {
+                if (!confirm(`图片中已存在水印："${existing}"，是否覆盖？`)) return;
+            }
+
+            // 3. 嵌入新水印
+            embedMessage(processor, trimmed);
+
+            // 4. 触发下载
+            const dataURL = processor.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = file.name || 'watermarked.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // 5. 清空界面
+            resetUI();
+        } catch (error) {
+            alert('处理失败：' + error.message);
+            console.error(error);
+        }
+    }
+
+    function resetUI() {
         document.getElementById('uploadArea').classList.remove('has-preview');
         document.getElementById('previewImg').src = '';
         document.getElementById('fileInput').value = '';
         document.getElementById('textInput').value = '';
-
-    } catch (error) {
-        alert('图片处理失败，请重试');
-        console.error(error);
+        window._currentFile = null;
     }
-}
 
+    (function() {
+        const fileInput = document.getElementById('fileInput');
+        const previewImg = document.getElementById('previewImg');
+        const uploadArea = document.getElementById('uploadArea');
+        const textInput = document.getElementById('textInput');
+        const submitBtn = document.getElementById('submitBtn');
+        window._currentFile = null;
 
-
-        // --------------------------------------------------------------
-        //  页面逻辑（极简）
-        // --------------------------------------------------------------
-        (function() {
-            const fileInput = document.getElementById('fileInput');
-            const previewImg = document.getElementById('previewImg');
-            const uploadArea = document.getElementById('uploadArea');
-            const textInput = document.getElementById('textInput');
-            const submitBtn = document.getElementById('submitBtn');
-
-            let currentFile = null;
-
-            fileInput.addEventListener('change', function(e) {
-                const file = this.files[0];
-                if (!file) {
-                    resetUpload();
-                    return;
-                }
-                if (!file.type.startsWith('image/')) {
-                    alert('请选择图片文件');
-                    this.value = '';
-                    resetUpload();
-                    return;
-                }
-                currentFile = file;
-                const reader = new FileReader();
-                reader.onload = function(ev) {
-                    previewImg.src = ev.target.result;
-                    uploadArea.classList.add('has-preview');
-                };
-                reader.readAsDataURL(file);
-            });
-
-            function resetUpload() {
-                currentFile = null;
-                uploadArea.classList.remove('has-preview');
-                previewImg.src = '';
-                fileInput.value = '';
+        fileInput.addEventListener('change', function(e) {
+            const file = this.files[0];
+            if (!file) { resetUI(); return; }
+            if (!file.type.startsWith('image/')) {
+                alert('请选择图片文件');
+                this.value = '';
+                resetUI();
+                return;
             }
+            window._currentFile = file;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                previewImg.src = ev.target.result;
+                uploadArea.classList.add('has-preview');
+            };
+            reader.readAsDataURL(file);
+        });
 
-            submitBtn.addEventListener('click', function() {
-                const text = textInput.value.trim();
-                handleSubmit(currentFile, text);
-            });
+        submitBtn.addEventListener('click', () => {
+            handleSubmit(window._currentFile, textInput.value.trim());
+        });
 
-            textInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    submitBtn.click();
-                }
-            });
-        })();
+        textInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitBtn.click();
+            }
+        });
+    })();
     </script>
-
 </body>
 </html>
