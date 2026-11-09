@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1120">
+<meta name="format-detection" content="telephone=no">
+<title>网址跳转</title>
+<style>
+  :root{
+    --txt:#e9edf7;
+    --dim:#8d97b0;
+    --line:rgba(255,255,255,.09);
+    --card:rgba(255,255,255,.055);
+    --accent:#5b8cff;
+    --accent2:#8b5cf6;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    min-height:100dvh;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    padding:calc(16px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--txt);
+    background:#0e1120;
+    background-image:
+      radial-gradient(circle at 15% 0%, #22305a 0%, transparent 52%),
+      radial-gradient(circle at 92% 8%, #3a2258 0%, transparent 48%);
+    background-attachment:fixed;
+  }
+  .wrap{width:100%;max-width:560px;}
+
+  /* ---------- 头部 ---------- */
+  .head{display:flex;align-items:center;gap:12px;margin:6px 4px 18px;}
+  .logo{
+    width:44px;height:44px;flex:0 0 44px;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    box-shadow:0 8px 20px rgba(91,140,255,.28);
+  }
+  .head h1{margin:0;font-size:19px;font-weight:700;letter-spacing:.3px;}
+  .head p{margin:3px 0 0;font-size:12px;color:var(--dim);}
+
+  /* ---------- 输入卡片 ---------- */
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:14px;
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    box-shadow:0 12px 34px rgba(0,0,0,.22);
+  }
+  .field{
+    display:flex;align-items:center;gap:6px;
+    height:54px;padding:0 6px 0 14px;
+    background:rgba(6,9,20,.6);
+    border:1px solid var(--line);
+    border-radius:14px;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .field:focus-within{
+    border-color:rgba(91,140,255,.75);
+    box-shadow:0 0 0 3px rgba(91,140,255,.16);
+  }
+  .field .globe{flex:0 0 18px;color:#59637d;}
+  .field input{
+    flex:1;min-width:0;height:100%;
+    background:transparent;border:none;outline:none;
+    color:var(--txt);font-size:16px;
+    font-family:inherit;
+  }
+  .field input::placeholder{color:#5b6480;}
+  .clear{
+    flex:0 0 36px;width:36px;height:36px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    background:transparent;border:none;color:#6b7590;font-size:14px;
+    opacity:0;pointer-events:none;transition:opacity .15s;cursor:pointer;
+  }
+  .clear.show{opacity:1;pointer-events:auto;}
+  .clear:active{background:rgba(255,255,255,.09);}
+
+  .actions{display:flex;gap:10px;margin-top:12px;}
+  button{font-family:inherit;}
+  .primary{
+    flex:1;height:50px;border:none;border-radius:14px;cursor:pointer;
+    font-size:16px;font-weight:600;color:#fff;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    box-shadow:0 8px 20px rgba(91,140,255,.30);
+    transition:transform .12s, box-shadow .12s;
+  }
+  .primary:active{transform:scale(.975);box-shadow:0 4px 12px rgba(91,140,255,.25);}
+  .ghost{
+    height:50px;padding:0 20px;border-radius:14px;cursor:pointer;
+    font-size:15px;font-weight:600;color:#cdd6ea;
+    background:rgba(255,255,255,.06);
+    border:1px solid var(--line);
+    transition:transform .12s, background .12s;
+  }
+  .ghost:active{transform:scale(.975);background:rgba(255,255,255,.11);}
+
+  /* ---------- 收藏区 ---------- */
+  .section{margin-top:24px;}
+  .section-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin:0 4px 8px;
+  }
+  .section-head h2{
+    margin:0;font-size:13.5px;font-weight:600;color:#aab3c8;letter-spacing:.6px;
+  }
+  .section-head h2 span{color:#5b6480;font-weight:500;}
+  .text-btn{
+    background:none;border:none;cursor:pointer;
+    color:#6b7590;font-size:13px;padding:6px 9px;border-radius:9px;
+  }
+  .text-btn:active{background:rgba(255,255,255,.07);color:#9aa4bb;}
+
+  .store-tip{
+    margin:0 4px 12px;
+    font-size:11.5px;color:#5b6480;letter-spacing:.2px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .store-tip i{
+    width:6px;height:6px;border-radius:50%;background:#38d39f;
+    box-shadow:0 0 8px rgba(56,211,159,.8);flex:0 0 6px;
+  }
+  .store-tip.warn i{background:#ffb020;box-shadow:0 0 8px rgba(255,176,32,.8);}
+  .store-tip.warn{color:#a07a3c;}
+
+  .fav-list{list-style:none;margin:0;padding:0;}
+  .fav{
+    display:flex;align-items:center;gap:12px;
+    background:rgba(255,255,255,.055);
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:16px;
+    padding:10px 8px 10px 10px;
+    margin-bottom:10px;
+    animation:pop .22s ease both;
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .avatar{
+    width:38px;height:38px;flex:0 0 38px;border-radius:12px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:700;color:#fff;user-select:none;
+  }
+  .fav-main{flex:1;min-width:0;padding:2px 0;cursor:pointer;}
+  .fav-name{
+    font-size:14.5px;font-weight:600;color:#e9edf7;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .fav-url{
+    font-size:11.5px;color:#7d879e;margin-top:3px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .del{
+    flex:0 0 40px;width:40px;height:40px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background:transparent;border:none;color:#6b7590;font-size:15px;cursor:pointer;
+  }
+  .del:active{background:rgba(255,80,80,.16);color:#ff6b6b;}
+
+  .empty{
+    margin:0;padding:28px 12px;text-align:center;
+    font-size:13px;color:#5b6480;line-height:1.7;
+    border:1px dashed rgba(255,255,255,.11);
+    border-radius:16px;
+  }
+
+  /* ---------- 提示条 ---------- */
+  .toast{
+    position:fixed;left:50%;z-index:99;
+    bottom:calc(28px + env(safe-area-inset-bottom));
+    transform:translate(-50%,18px);
+    max-width:88vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    padding:11px 20px;border-radius:999px;
+    font-size:14px;color:#e9edf7;
+    background:rgba(32,38,58,.96);
+    border:1px solid rgba(255,255,255,.12);
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    opacity:0;pointer-events:none;
+    transition:opacity .22s, transform .22s;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+
+  @media (min-width:600px){
+    body{padding-top:48px;}
+    .fav-name{font-size:15px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <div class="logo">🔗</div>
+    <div>
+      <h1>网址跳转</h1>
+      <p>输入网址，一键前往 · 收藏数量不限、永久保存</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <label class="field">
+      <svg class="globe" viewBox="0 0 24 24" width="18" height="18" fill="none"
+           stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"></path>
+      </svg>
+      <input id="urlInput" type="text" inputmode="url" enterkeyhint="go"
+             placeholder="输入网址，如 example.com"
+             autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button id="clearBtn" class="clear" type="button" aria-label="清空">✕</button>
+    </label>
+
+    <div class="actions">
+      <button id="goBtn" class="primary" type="button">前往</button>
+      <button id="favBtn" class="ghost" type="button">☆ 收藏</button>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>我的收藏 <span id="favCount"></span></h2>
+      <button id="clearAll" class="text-btn" type="button" hidden>清空</button>
+    </div>
+    <p id="storeTip" class="store-tip"><i></i><span>本地存储 · 不限数量 · 永不过期</span></p>
+    <ul id="favList" class="fav-list"></ul>
+    <p id="emptyTip" class="empty">还没有收藏<br>输入网址后点「☆ 收藏」，想收多少收多少</p>
+  </section>
+
+</div>
+
+<div id="toast" class="toast"></div>
+<noscript><p style="text-align:center;color:#ff6b6b">请开启 JavaScript 后使用</p></noscript>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==================== 配置 ==================== */
+  var LS_KEY      = 'linkJumpFavs_v2';      // 主存储：无过期、容量 ~5MB+
+  var COOKIE_NAME = 'linkJumpFavs_v1';      // 兼容旧版 / 降级存储
+  var COOKIE_DAYS = 9999;                   // 降级时也设最长期限
+
+  /* ==================== 元素 ==================== */
+  var input      = document.getElementById('urlInput');
+  var goBtn      = document.getElementById('goBtn');
+  var favBtn     = document.getElementById('favBtn');
+  var clearBtn   = document.getElementById('clearBtn');
+  var favListEl  = document.getElementById('favList');
+  var emptyTip   = document.getElementById('emptyTip');
+  var favCount   = document.getElementById('favCount');
+  var clearAllBt = document.getElementById('clearAll');
+  var storeTip   = document.getElementById('storeTip');
+  var toastEl    = document.getElementById('toast');
+
+  /* ==================== Cookie 底层 ==================== */
+  function setCookie(name, value, days) {
+    var d = new Date();
+    d.setTime(d.getTime() + days * 864e5);
+    document.cookie = name + '=' + encodeURIComponent(value) +
+      ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax';
+  }
+  function getCookie(name) {
+    var pairs = document.cookie ? document.cookie.split('; ') : [];
+    for (var i = 0; i < pairs.length; i++) {
+      var idx = pairs[i].indexOf('=');
+      if (idx < 0) continue;
+      if (pairs[i].slice(0, idx) === name) {
+        return decodeURIComponent(pairs[i].slice(idx + 1));
+      }
+    }
+    return null;
+  }
+  function delCookie(name) {
+    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax';
+  }
+
+  /* ==================== 存储层：localStorage 优先，Cookie 降级 ==================== */
+  var storage = (function () {
+    var lsOK = false;
+    try {
+      var probe = '__ls_probe__';
+      localStorage.setItem(probe, '1');
+      localStorage.removeItem(probe);
+      lsOK = true;
+    } catch (e) { lsOK = false; }
+
+    function sanitize(arr) {
+      if (!Array.isArray(arr)) return [];
+      return arr.filter(function (x) {
+        return x && typeof x.url === 'string' && x.url;
+      }).map(function (x) {
+        return { url: x.url, name: x.name || x.url, ts: x.ts || 0 };
+      });
+    }
+
+    function readCookie() {
+      var raw = getCookie(COOKIE_NAME);
+      if (!raw) return [];
+      try { return sanitize(JSON.parse(raw)); } catch (e) { return []; }
+    }
+
+    return {
+      mode: lsOK ? 'local' : 'cookie',
+
+      read: function () {
+        if (lsOK) {
+          try {
+            var raw = localStorage.getItem(LS_KEY);
+            return raw ? sanitize(JSON.parse(raw)) : [];
+          } catch (e) { return []; }
+        }
+        return readCookie();
+      },
+
+      // 成功返回 true，失败返回 false
+      write: function (list) {
+        var str = JSON.stringify(list);
+        if (lsOK) {
+          try {
+            localStorage.setItem(LS_KEY, str);
+            return localStorage.getItem(LS_KEY) === str;
+          } catch (e) {
+            return false;   // 配额满或隐私限制
+          }
+        }
+        // Cookie 降级：不加数量裁剪，仅在物理超限时失败
+        if (encodeURIComponent(str).length > 3900) return false;
+        setCookie(COOKIE_NAME, str, COOKIE_DAYS);
+        return getCookie(COOKIE_NAME) === str;
+      },
+
+      clear: function () {
+        if (lsOK) { try { localStorage.removeItem(LS_KEY); } catch (e) {} }
+        delCookie(COOKIE_NAME);
+      }
+    };
+  })();
+
+  /* ==================== 旧 Cookie 数据迁移（只做一次） ==================== */
+  (function migrate() {
+    if (storage.mode !== 'local') return;
+    var oldRaw = getCookie(COOKIE_NAME);
+    if (!oldRaw) return;
+
+    var hasNew = false;
+    try { hasNew = !!localStorage.getItem(LS_KEY); } catch (e) {}
+
+    if (!hasNew) {
+      try {
+        var arr = JSON.parse(oldRaw);
+        if (Array.isArray(arr) && arr.length) {
+          var str = JSON.stringify(arr);
+          localStorage.setItem(LS_KEY, str);
+          if (localStorage.getItem(LS_KEY) !== str) return;  // 写入失败则保留 Cookie
+        }
+      } catch (e) { return; }
+    }
+    delCookie(COOKIE_NAME);
+  })();
+
+  /* ==================== 网址处理 ==================== */
+  function parseInput(raw) {
+    var s = String(raw || '').trim().replace(/\s+/g, '');
+    if (!s) return null;
+
+    if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s)) {
+      s = (s.indexOf('//') === 0) ? 'https:' + s : 'https://' + s;
+    }
+    try {
+      var u = new URL(s);
+      if (u.protocol === 'http:' || u.protocol === 'https:') {
+        return u.hostname ? u.href : null;
+      }
+      if (u.protocol === 'mailto:' || u.protocol === 'tel:') return u.href;
+      return null;   // 屏蔽 javascript: / data: 等危险协议
+    } catch (e) { return null; }
+  }
+
+  function nameOf(url) {
+    try {
+      var u = new URL(url);
+      var s = u.hostname.replace(/^www\./, '') +
+              (u.pathname === '/' ? '' : u.pathname) + (u.search || '');
+      return s.length > 80 ? s.slice(0, 80) + '…' : s;
+    } catch (e) { return url; }
+  }
+  function initialOf(url) {
+    try {
+      var h = new URL(url).hostname.replace(/^www\./, '');
+      return (h.charAt(0) || '?').toUpperCase();
+    } catch (e) { return '?'; }
+  }
+  function hashOf(str) {
+    var h = 0;
+    for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+  function gradientOf(url) {
+    var h = hashOf(url);
+    return 'linear-gradient(135deg,hsl(' + (h % 360) + ',68%,58%),hsl(' +
+           ((h + 45) % 360) + ',68%,46%))';
+  }
+
+  /* ==================== 渲染 ==================== */
+  function render() {
+    var list = storage.read();
+
+    favCount.textContent = list.length ? '· ' + list.length : '';
+    emptyTip.hidden = list.length > 0;
+    clearAllBt.hidden = list.length === 0;
+
+    favListEl.innerHTML = '';
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < list.length; i++) frag.appendChild(buildItem(list[i], i));
+    favListEl.appendChild(frag);
+  }
+
+  function buildItem(item, index) {
+    var li = document.createElement('li');
+    li.className = 'fav';
+
+    var avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = initialOf(item.url);
+    avatar.style.background = gradientOf(item.url);
+
+    var main = document.createElement('div');
+    main.className = 'fav-main';
+
+    var nm = document.createElement('div');
+    nm.className = 'fav-name';
+    nm.textContent = item.name || nameOf(item.url);
+
+    var ur = document.createElement('div');
+    ur.className = 'fav-url';
+    ur.textContent = item.url;
+
+    main.appendChild(nm);
+    main.appendChild(ur);
+
+    var del = document.createElement('button');
+    del.className = 'del';
+    del.type = 'button';
+    del.setAttribute('aria-label', '删除收藏');
+    del.textContent = '✕';
+
+    function open() { window.location.href = item.url; }
+    avatar.addEventListener('click', open);
+    main.addEventListener('click', open);
+
+    del.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var cur = storage.read();
+      // 按 url 精确定位，避免索引错位
+      for (var i = 0; i < cur.length; i++) {
+        if (cur[i].url === item.url) { cur.splice(i, 1); break; }
+      }
+      if (!storage.write(cur)) { toast('删除失败：存储空间不可用'); return; }
+      render();
+      toast('已删除');
+    });
+
+    li.appendChild(avatar);
+    li.appendChild(main);
+    li.appendChild(del);
+    return li;
+  }
+
+  /* ==================== 提示条 ==================== */
+  var toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1900);
+  }
+
+  /* ==================== 操作 ==================== */
+  function go() {
+    var url = parseInput(input.value);
+    if (!url) { toast('请输入有效的网址'); input.focus(); return; }
+    window.location.href = url;
+  }
+
+  function addFav() {
+    var url = parseInput(input.value);
+    if (!url) { toast('请输入有效的网址'); input.focus(); return; }
+
+    var list = storage.read();
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].url === url) { idx = i; break; }
+    }
+    var existed = idx >= 0;
+    if (existed) {
+      var moved = list.splice(idx, 1)[0];
+      list.unshift(moved);
+    } else {
+      list.unshift({ url: url, name: nameOf(url), ts: Date.now() });
+    }
+
+    if (!storage.write(list)) {
+      toast(storage.mode === 'local'
+        ? '收藏失败：本机存储已满或被禁用'
+        : '收藏失败：浏览器 Cookie 空间不足');
+      return;
+    }
+    render();
+    toast(existed ? '已移到最前面' : '已收藏 ✓');
+  }
+
+  /* ==================== 事件绑定 ==================== */
+  input.addEventListener('input', function () {
+    clearBtn.classList.toggle('show', input.value.length > 0);
+  });
+
+  clearBtn.addEventListener('click', function () {
+    input.value = '';
+    clearBtn.classList.remove('show');
+    input.focus();
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); go(); }
+  });
+
+  goBtn.addEventListener('click', go);
+  favBtn.addEventListener('click', addFav);
+
+  clearAllBt.addEventListener('click', function () {
+    if (!window.confirm('确定要清空全部收藏吗？此操作不可恢复。')) return;
+    storage.clear();
+    render();
+    toast('已清空');
+  });
+
+  /* ==================== 初始化 ==================== */
+  // 存储状态提示
+  var tipText = storeTip.querySelector('span');
+  if (storage.mode === 'local') {
+    tipText.textContent = '本地存储 · 不限数量 · 永不过期 · 仅存于本机';
+  } else {
+    storeTip.classList.add('warn');
+    tipText.textContent = 'Cookie 存储 · 容量受限，建议开启浏览器本地存储';
+  }
+
+  render();
+
+  try {
+    if (window.matchMedia('(hover:hover) and (pointer:fine)').matches) input.focus();
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
