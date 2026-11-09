@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0e1120">
 <meta name="format-detection" content="telephone=no">
-<title>网址跳转</title>
+<title></title>
 <style>
   :root{
     --txt:#e9edf7;
@@ -198,8 +198,8 @@
   <header class="head">
     <div class="logo">🔗</div>
     <div>
-      <h1>网址跳转</h1>
-      <p>输入网址，一键前往 · 收藏数量不限、永久保存</p>
+      <h1></h1>
+      <p></p>
     </div>
   </header>
 
@@ -211,31 +211,31 @@
         <path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"></path>
       </svg>
       <input id="urlInput" type="text" inputmode="url" enterkeyhint="go"
-             placeholder="输入网址，如 example.com"
+             placeholder=""
              autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
       <button id="clearBtn" class="clear" type="button" aria-label="清空">✕</button>
     </label>
 
     <div class="actions">
-      <button id="goBtn" class="primary" type="button">前往</button>
-      <button id="favBtn" class="ghost" type="button">☆ 收藏</button>
+      <button id="goBtn" class="primary" type="button"></button>
+      <button id="favBtn" class="ghost" type="button"></button>
     </div>
   </div>
 
   <section class="section">
     <div class="section-head">
-      <h2>我的收藏 <span id="favCount"></span></h2>
-      <button id="clearAll" class="text-btn" type="button" hidden>清空</button>
+      <h2><span id="favCount"></span></h2>
+      <button id="clearAll" class="text-btn" type="button" hidden></button>
     </div>
-    <p id="storeTip" class="store-tip"><i></i><span>本地存储 · 不限数量 · 永不过期</span></p>
+    <p id="storeTip" class="store-tip"><i></i><span></span></p>
     <ul id="favList" class="fav-list"></ul>
-    <p id="emptyTip" class="empty">还没有收藏<br>输入网址后点「☆ 收藏」，想收多少收多少</p>
+    <p id="emptyTip" class="empty"><br></p>
   </section>
 
 </div>
 
 <div id="toast" class="toast"></div>
-<noscript><p style="text-align:center;color:#ff6b6b">请开启 JavaScript 后使用</p></noscript>
+<noscript><p style="text-align:center;color:#ff6b6b"></p></noscript>
 
 <script>
 (function () {
@@ -484,13 +484,13 @@
   /* ==================== 操作 ==================== */
   function go() {
     var url = parseInput(input.value);
-    if (!url) { toast('请输入有效的网址'); input.focus(); return; }
+    if (!url) { toast(''); input.focus(); return; }
     window.location.href = url;
   }
 
   function addFav() {
     var url = parseInput(input.value);
-    if (!url) { toast('请输入有效的网址'); input.focus(); return; }
+    if (!url) { toast(''); input.focus(); return; }
 
     var list = storage.read();
     var idx = -1;
@@ -507,12 +507,12 @@
 
     if (!storage.write(list)) {
       toast(storage.mode === 'local'
-        ? '收藏失败：本机存储已满或被禁用'
-        : '收藏失败：浏览器 Cookie 空间不足');
+        ? ''
+        : '');
       return;
     }
     render();
-    toast(existed ? '已移到最前面' : '已收藏 ✓');
+    toast(existed ? '' : '');
   }
 
   /* ==================== 事件绑定 ==================== */
@@ -534,20 +534,20 @@
   favBtn.addEventListener('click', addFav);
 
   clearAllBt.addEventListener('click', function () {
-    if (!window.confirm('确定要清空全部收藏吗？此操作不可恢复。')) return;
+    if (!window.confirm('')) return;
     storage.clear();
     render();
-    toast('已清空');
+    toast('');
   });
 
   /* ==================== 初始化 ==================== */
   // 存储状态提示
   var tipText = storeTip.querySelector('span');
   if (storage.mode === 'local') {
-    tipText.textContent = '本地存储 · 不限数量 · 永不过期 · 仅存于本机';
+    tipText.textContent = '';
   } else {
     storeTip.classList.add('warn');
-    tipText.textContent = 'Cookie 存储 · 容量受限，建议开启浏览器本地存储';
+    tipText.textContent = '';
   }
 
   render();
